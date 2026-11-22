@@ -46,23 +46,19 @@ export default function Exam({ data }) {
     if (left === 0 && !finished) finish('time')
   }, [left, finished, finish])
   // як на іспиті: третя помилка - іспит не складено
+  // невелика пауза, щоб встигнути побачити підсвітку останньої відповіді
   useEffect(() => {
-    if (errors > MAX_ERRORS && !finished) finish('errors')
-    else if (answered === ticket.length && !finished) finish('done')
+    if (finished) return
+    const reason = errors > MAX_ERRORS ? 'errors' : answered === ticket.length ? 'done' : null
+    if (!reason) return
+    const t = setTimeout(() => finish(reason), 1500)
+    return () => clearTimeout(t)
   }, [errors, answered, ticket.length, finished, finish])
 
   const choose = (i) => {
     if (answers[idx] !== undefined || finished) return
-    const nextAnswers = { ...answers, [idx]: i }
-    setAnswers(nextAnswers)
-    // перехід до наступного питання без відповіді
-    for (let k = 1; k <= ticket.length; k++) {
-      const j = (idx + k) % ticket.length
-      if (nextAnswers[j] === undefined) {
-        setTimeout(() => setIdx(j), 250)
-        break
-      }
-    }
+    // як у сервісному центрі: одразу видно, правильно чи ні
+    setAnswers({ ...answers, [idx]: i })
   }
 
   const skip = () => {
@@ -77,6 +73,7 @@ export default function Exam({ data }) {
       if (finished) return
       const n = Number(e.key)
       if (n >= 1 && n <= ticket[idx].o.length) choose(n - 1)
+      else if ((e.key === 'Enter' || e.key === 'ArrowRight') && answers[idx] !== undefined) skip()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -164,7 +161,7 @@ export default function Exam({ data }) {
         {ticket.map((t, i) => (
           <button
             key={t.id}
-            className={'nav-cell' + (i === idx ? ' current' : '') + (answers[i] !== undefined ? ' answered' : '')}
+            className={'nav-cell' + (i === idx ? ' current' : '') + (answers[i] === undefined ? '' : answers[i] === t.a ? ' ok' : ' bad')}
             onClick={() => setIdx(i)}
           >
             {i + 1}
@@ -172,15 +169,22 @@ export default function Exam({ data }) {
         ))}
       </div>
       <main className="page">
-        <QuestionView key={q.id} q={q} selected={answers[idx]} reveal={false} onSelect={choose} />
-        <p className="muted small">Помилок: {errors} з {MAX_ERRORS} допустимих. Відповідь не можна змінити.</p>
+        <QuestionView key={q.id} q={q} selected={answers[idx]} reveal={answers[idx] !== undefined} onSelect={choose} />
+        {answers[idx] !== undefined && (
+          <div className={'feedback ' + (answers[idx] === q.a ? 'ok' : 'bad')}>
+            {answers[idx] === q.a ? 'Правильно!' : `Помилка. Правильна відповідь: ${q.a + 1}`}
+          </div>
+        )}
+        <p className="muted small">
+          Помилок: {errors} з {MAX_ERRORS} допустимих
+        </p>
       </main>
       <nav className="bottom-bar">
         <button className="btn" onClick={() => (confirm('Завершити іспит достроково?') ? finish('done') : null)}>
           Завершити
         </button>
-        <button className="btn btn-primary grow" onClick={skip} disabled={answers[idx] !== undefined}>
-          Пропустити →
+        <button className="btn btn-primary grow" onClick={skip} disabled={answered === ticket.length}>
+          {answers[idx] !== undefined ? 'Наступне питання →' : 'Пропустити →'}
         </button>
       </nav>
     </>
