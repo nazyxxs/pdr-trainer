@@ -1,0 +1,21 @@
+{
+  "name": "pdr-trainer",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Тренажер тестів ПДР України (офіційна база ГСЦ МВС). by nazyxxs",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "vite": "^7.0.0"
+  }
+}
