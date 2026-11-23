@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { go } from './router.js'
 
 export function Header({ title, back = '', right = null }) {
@@ -90,6 +90,40 @@ export function QuestionView({ q, selected, reveal, onSelect, number, total }) {
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// Свайп по питанню: пальцем вліво - наступне, вправо - попереднє.
+// Дотики біля самого краю екрана ігноруємо, щоб не заважати жесту "назад" у браузері.
+export function useSwipe(onNext, onPrev) {
+  const start = useRef(null)
+  return {
+    onTouchStart(e) {
+      const t = e.touches[0]
+      const edge = 24
+      start.current = t.clientX < edge || t.clientX > window.innerWidth - edge ? null : { x: t.clientX, y: t.clientY }
+    },
+    onTouchEnd(e) {
+      if (!start.current) return
+      const t = e.changedTouches[0]
+      const dx = t.clientX - start.current.x
+      const dy = t.clientY - start.current.y
+      start.current = null
+      if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.6) return
+      if (dx < 0) onNext?.()
+      else onPrev?.()
+    },
+  }
+}
+
+// Плавна поява питання з того боку, куди гортаємо
+export function Slide({ index, children }) {
+  const ref = useRef({ index, dir: 'next' })
+  if (ref.current.index !== index) ref.current = { index, dir: index > ref.current.index ? 'next' : 'prev' }
+  return (
+    <div key={index} className={'slide slide-' + ref.current.dir}>
+      {children}
     </div>
   )
 }

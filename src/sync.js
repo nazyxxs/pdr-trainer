@@ -95,6 +95,7 @@ const ERRORS = {
   'User already registered': 'Такий користувач уже є. Спробуй увійти',
   'Email not confirmed': 'Пошту ще не підтверджено. Перевір листи',
   'Password should be at least 6 characters.': 'Пароль має бути щонайменше 6 символів',
+  'email rate limit exceeded': 'Забагато реєстрацій за короткий час. Спробуй пізніше',
   'Failed to fetch': 'Немає з’єднання з сервером. Перевір інтернет',
 }
 const tr = (e) => ERRORS[e?.message] || e?.message || 'Щось пішло не так'

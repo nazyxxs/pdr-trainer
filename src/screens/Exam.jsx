@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { makeExamTicket, CATEGORIES } from '../data.js'
 import { store } from '../store.js'
 import { go } from '../router.js'
-import { Header, QuestionView } from '../components.jsx'
+import { Header, QuestionView, Slide, useSwipe } from '../components.jsx'
 
 const LIMIT = 20 * 60 // 20 хвилин
 const MAX_ERRORS = 2
@@ -68,6 +68,15 @@ export default function Exam({ data }) {
     }
   }
 
+  const swipeExam = useSwipe(
+    () => (answered < ticket.length ? skip() : idx < ticket.length - 1 && setIdx(idx + 1)),
+    () => idx > 0 && setIdx(idx - 1),
+  )
+  const swipeReview = useSwipe(
+    () => review !== null && review < ticket.length - 1 && setReview(review + 1),
+    () => review !== null && review > 0 && setReview(review - 1),
+  )
+
   useEffect(() => {
     const onKey = (e) => {
       if (finished) return
@@ -131,8 +140,10 @@ export default function Exam({ data }) {
     return (
       <>
         <Header title={`Розбір: питання ${review + 1}`} right={<button className="chip" onClick={() => setReview(null)}>До результату</button>} />
-        <main className="page">
-          <QuestionView q={q} selected={answers[review]} reveal onSelect={() => {}} />
+        <main className="page" {...swipeReview}>
+          <Slide index={review}>
+            <QuestionView q={q} selected={answers[review]} reveal onSelect={() => {}} />
+          </Slide>
           {answers[review] === undefined && <div className="feedback bad">Без відповіді. Правильна: {q.a + 1}</div>}
         </main>
         <nav className="bottom-bar">
@@ -168,8 +179,10 @@ export default function Exam({ data }) {
           </button>
         ))}
       </div>
-      <main className="page">
-        <QuestionView key={q.id} q={q} selected={answers[idx]} reveal={answers[idx] !== undefined} onSelect={choose} />
+      <main className="page" {...swipeExam}>
+        <Slide index={idx}>
+          <QuestionView key={q.id} q={q} selected={answers[idx]} reveal={answers[idx] !== undefined} onSelect={choose} />
+        </Slide>
         {answers[idx] !== undefined && (
           <div className={'feedback ' + (answers[idx] === q.a ? 'ok' : 'bad')}>
             {answers[idx] === q.a ? 'Правильно!' : `Помилка. Правильна відповідь: ${q.a + 1}`}

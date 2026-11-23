@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { questionsForCategory, shuffle } from '../data.js'
 import { store } from '../store.js'
 import { go } from '../router.js'
-import { Header, QuestionView } from '../components.jsx'
+import { Header, QuestionView, Slide, useSwipe } from '../components.jsx'
 
 // Формує список питань для режиму тренування
 function buildList(data, st, mode, args) {
@@ -57,6 +57,8 @@ export default function Practice({ data, mode, args }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [choose, next, revealed, idx, q, done])
+
+  const swipe = useSwipe(next, () => idx > 0 && setIdx(idx - 1))
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -119,8 +121,10 @@ export default function Practice({ data, mode, args }) {
       <div className="progress">
         <div style={{ width: `${((idx + (revealed ? 1 : 0)) / list.length) * 100}%` }} />
       </div>
-      <main className="page">
-        <QuestionView key={q.id} q={q} selected={sel} reveal={revealed} onSelect={choose} number={idx + 1} total={list.length} />
+      <main className="page" {...swipe}>
+        <Slide index={idx}>
+          <QuestionView key={q.id} q={q} selected={sel} reveal={revealed} onSelect={choose} number={idx + 1} total={list.length} />
+        </Slide>
         {revealed && (
           <div className={'feedback ' + (sel === q.a ? 'ok' : 'bad')}>
             {sel === q.a ? 'Правильно!' : `Неправильно. Правильна відповідь: ${q.a + 1}`}

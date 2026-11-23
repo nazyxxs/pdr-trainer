@@ -57,6 +57,18 @@ export default function Settings({ st }) {
         </section>
 
         <section className="card">
+          <h3>Щоденна ціль 🔥</h3>
+          <p className="muted small">Скільки питань на день треба пройти, щоб вогник горів.</p>
+          <div className="seg">
+            {[10, 20, 30, 50].map((n) => (
+              <button key={n} className={(st.settings.dailyGoal || 20) === n ? 'active' : ''} onClick={() => store.setSettings({ dailyGoal: n })}>
+                {n}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="card">
           <h3>Тема оформлення</h3>
           <div className="seg">
             {[
