@@ -5,3 +5,4 @@ _work/
 *.log
 .DS_Store
 .env.local
+__pycache__/

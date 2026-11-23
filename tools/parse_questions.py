@@ -1,7 +1,7 @@
 """Парсер офіційних тестових питань ПДР (PDF ГСЦ МВС) -> JSON + картинки.
 Запуск: python tools/parse_questions.py
 """
-import json, re, sys
+import bisect, json, re, sys
 from pathlib import Path
 import pymupdf
 
@@ -113,31 +113,23 @@ def main():
                 cur_q["_o"][-1].append(t)
     finish_q()
 
-    # регіони кожного питання: [page, y_start, y_end]
-    by_page = {}
+    # картинки: кожне зображення належить останньому питанню, що почалося ДО нього
+    # (враховує картинки, перенесені на наступну сторінку, навіть на сторінку без тексту)
+    starts = sorted((q["_regions"][0][0], q["_regions"][0][1], i) for i, q in enumerate(questions))
+    keys = [(p_, y_) for p_, y_, _ in starts]
+    found = {}
+    for pno in range(doc.page_count):
+        for info in doc[pno].get_image_info():
+            x0, iy0, x1, iy1 = info["bbox"]
+            if x1 - x0 < 8 or iy1 - iy0 < 8:
+                continue
+            cy = (iy0 + iy1) / 2
+            k = bisect.bisect_right(keys, (pno, cy + 2)) - 1
+            if k >= 0:
+                found.setdefault(starts[k][2], []).append((pno, pymupdf.Rect(info["bbox"])))
     for i, q in enumerate(questions):
-        for r in q["_regions"]:
-            by_page.setdefault(r[0], []).append((r[1], i))
-    for pno, lst in by_page.items():
-        lst.sort()
-        for k, (y, i) in enumerate(lst):
-            y_end = lst[k + 1][0] if k + 1 < len(lst) else 10_000
-            for r in questions[i]["_regions"]:
-                if r[0] == pno and r[1] == y:
-                    r[2] = y_end
-
-    # картинки: всі зображення, що потрапили в регіон питання -> один кроп
-    for q in questions:
-        rects = []
-        for pno, y0, y1 in q.pop("_regions"):
-            page = doc[pno]
-            for info in page.get_image_info():
-                x0, iy0, x1, iy1 = info["bbox"]
-                if x1 - x0 < 8 or iy1 - iy0 < 8:
-                    continue
-                cy = (iy0 + iy1) / 2
-                if y0 - 2 <= cy < y1:
-                    rects.append((pno, pymupdf.Rect(info["bbox"])))
+        q.pop("_regions")
+        rects = found.get(i, [])
         q["image"] = None
         if rects:
             pages = sorted({p for p, _ in rects})
