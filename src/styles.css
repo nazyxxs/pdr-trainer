@@ -890,3 +890,15 @@ code {
 @media (prefers-reduced-motion: reduce) {
   .slide-next, .slide-prev { animation: none; }
 }
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  padding: 6px 0;
+  font-size: 0.9rem;
+}
+.card.highlight {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}

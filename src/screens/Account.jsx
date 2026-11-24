@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSync, signIn, signUp, signOut, syncNow } from '../sync.js'
+import { useSync, signIn, signUp, signOut, syncNow, sendPasswordReset, updatePassword } from '../sync.js'
 import { Header } from '../components.jsx'
 
 const STATE_TEXT = {
@@ -39,6 +39,12 @@ export default function Account() {
       <>
         <Header title="Акаунт" />
         <main className="page">
+          {sync.recovery && (
+            <section className="card highlight">
+              <h3>Придумай новий пароль</h3>
+              <ChangePassword autoFocus />
+            </section>
+          )}
           <section className="card">
             <h3>Ти увійшов як</h3>
             <p className="account-email">{sync.user.email}</p>
@@ -55,6 +61,12 @@ export default function Account() {
               </button>
             </div>
           </section>
+          {!sync.recovery && (
+            <section className="card">
+              <h3>Змінити пароль</h3>
+              <ChangePassword />
+            </section>
+          )}
         </main>
       </>
     )
@@ -65,7 +77,10 @@ export default function Account() {
     setLoading(true)
     setMsg(null)
     try {
-      if (mode === 'login') await signIn(email.trim(), password)
+      if (mode === 'reset') {
+        await sendPasswordReset(email.trim())
+        setMsg({ ok: true, text: 'Лист надіслано. Відкрий посилання з нього і придумай новий пароль.' })
+      } else if (mode === 'login') await signIn(email.trim(), password)
       else {
         const { needsConfirm } = await signUp(email.trim(), password)
         if (needsConfirm) setMsg({ ok: true, text: 'Готово! Ми надіслали лист на пошту - підтверди її і увійди.' })
@@ -83,7 +98,7 @@ export default function Account() {
       <main className="page">
         <section className="card">
           <div className="seg">
-            <button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')}>
+            <button className={mode !== 'register' ? 'active' : ''} onClick={() => setMode('login')}>
               Вхід
             </button>
             <button className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>
@@ -92,6 +107,7 @@ export default function Account() {
           </div>
           <form className="auth-form" onSubmit={submit}>
             <input type="email" placeholder="Email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            {mode !== 'reset' && (
             <input
               type="password"
               placeholder="Пароль (від 6 символів)"
@@ -101,14 +117,58 @@ export default function Account() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            )}
             <button className="btn btn-primary" disabled={loading}>
-              {loading ? 'Зачекай...' : mode === 'login' ? 'Увійти' : 'Створити акаунт'}
+              {loading ? 'Зачекай...' : mode === 'login' ? 'Увійти' : mode === 'reset' ? 'Надіслати лист для зміни пароля' : 'Створити акаунт'}
             </button>
           </form>
+          {mode === 'login' && (
+            <button className="link-btn" onClick={() => (setMode('reset'), setMsg(null))}>
+              Забули пароль?
+            </button>
+          )}
+          {mode === 'reset' && (
+            <button className="link-btn" onClick={() => (setMode('login'), setMsg(null))}>
+              ← Назад до входу
+            </button>
+          )}
           {msg && <p className={msg.ok ? 'note' : 'note bad'}>{msg.text}</p>}
           <p className="muted small">Прогрес, який уже є на цьому пристрої, не пропаде - після входу він об’єднається з акаунтом.</p>
         </section>
       </main>
     </>
+  )
+}
+
+function ChangePassword({ autoFocus }) {
+  const [pw, setPw] = useState('')
+  const [pw2, setPw2] = useState('')
+  const [msg, setMsg] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const submit = async (e) => {
+    e.preventDefault()
+    if (pw !== pw2) return setMsg({ ok: false, text: 'Паролі не збігаються' })
+    setLoading(true)
+    setMsg(null)
+    try {
+      await updatePassword(pw)
+      setPw('')
+      setPw2('')
+      setMsg({ ok: true, text: 'Пароль змінено ✓' })
+    } catch (err) {
+      setMsg({ ok: false, text: err.message })
+    } finally {
+      setLoading(false)
+    }
+  }
+  return (
+    <form className="auth-form" onSubmit={submit}>
+      <input type="password" placeholder="Новий пароль (від 6 символів)" autoComplete="new-password" minLength={6} required autoFocus={autoFocus} value={pw} onChange={(e) => setPw(e.target.value)} />
+      <input type="password" placeholder="Повтори новий пароль" autoComplete="new-password" minLength={6} required value={pw2} onChange={(e) => setPw2(e.target.value)} />
+      <button className="btn btn-primary" disabled={loading}>
+        {loading ? 'Зачекай...' : 'Зберегти пароль'}
+      </button>
+      {msg && <p className={msg.ok ? 'note' : 'note bad'}>{msg.text}</p>}
+    </form>
   )
 }

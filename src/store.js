@@ -19,7 +19,29 @@ const deviceId = (() => {
 })()
 
 // дата в локальному часовому поясі: '2026-11-23'
-export const dayKey = (d = new Date()) => d.toLocaleDateString('sv-SE')
+const pad = (n) => String(n).padStart(2, '0')
+export const dayKey = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+
+// приводимо ключі днів до вигляду '2026-11-24' (на випадок іншого формату дати в браузері)
+function normDay(k) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(k)) return k
+  const m = k.match(/(\d{1,4})\D+(\d{1,2})\D+(\d{1,4})/)
+  if (!m) return null
+  let [, a, b, c] = m.map(Number)
+  if (a > 31) return `${a}-${pad(b)}-${pad(c)}` // y-m-d
+  if (k.includes('/') && a <= 12 && b > 12) [a, b] = [b, a] // m/d/y
+  return `${c}-${pad(b)}-${pad(a)}` // d.m.y
+}
+function normDays(days) {
+  const out = {}
+  for (const [k, devs] of Object.entries(days || {})) {
+    const nk = normDay(k)
+    if (!nk) continue
+    out[nk] = out[nk] || {}
+    for (const [dev, n] of Object.entries(devs)) out[nk][dev] = Math.max(out[nk][dev] || 0, n)
+  }
+  return out
+}
 
 const empty = () => ({
   q: {}, // id питання -> { c: правильних, w: помилок, last: 1|0, t: час }
@@ -33,7 +55,7 @@ const empty = () => ({
 function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY))
-    if (raw && raw.q) return { ...empty(), ...raw, settings: { ...empty().settings, ...raw.settings } }
+    if (raw && raw.q) return { ...empty(), ...raw, days: normDays(raw.days), settings: { ...empty().settings, ...raw.settings } }
   } catch {
     /* пошкоджені дані - починаємо з нуля */
   }
@@ -70,7 +92,7 @@ export function mergeStates(a, b) {
   const newer = (b.settingsT || 0) > (a.settingsT || 0) ? b : a
   const resetDay = resetAt ? dayKey(new Date(resetAt)) : ''
   const days = {}
-  for (const src of [a.days || {}, b.days || {}]) {
+  for (const src of [normDays(a.days), normDays(b.days)]) {
     for (const [day, devs] of Object.entries(src)) {
       if (day < resetDay) continue
       days[day] = days[day] || {}
