@@ -10,6 +10,11 @@ import Exam from './screens/Exam.jsx'
 import Stats from './screens/Stats.jsx'
 import Settings from './screens/Settings.jsx'
 import Account from './screens/Account.jsx'
+import Profile from './screens/Profile.jsx'
+import PublicProfile from './screens/PublicProfile.jsx'
+import Friends from './screens/Friends.jsx'
+import Battle from './screens/Battle.jsx'
+import InviteBanner from './InviteBanner.jsx'
 
 export default function App() {
   const [data, setData] = useState(null)
@@ -30,22 +35,39 @@ export default function App() {
 
   const [screen, ...args] = route
   const key = route.join('/') + '|' + st.settings.category
+  const page = (() => {
   switch (screen) {
-    case 'topics':
-      return <Topics data={data} st={st} />
-    case 'topic':
-      return <Topic data={data} st={st} id={Number(args[0])} />
-    case 'practice':
-      return <Practice key={key} data={data} mode={args[0]} args={args.slice(1)} />
-    case 'exam':
-      return <Exam key={key} data={data} />
-    case 'stats':
-      return <Stats data={data} st={st} />
-    case 'account':
-      return <Account />
-    case 'settings':
-      return <Settings st={st} />
-    default:
-      return <Home data={data} st={st} />
-  }
+      case 'topics':
+        return <Topics data={data} st={st} />
+      case 'topic':
+        return <Topic data={data} st={st} id={Number(args[0])} />
+      case 'practice':
+        return <Practice key={key} data={data} mode={args[0]} args={args.slice(1)} />
+      case 'exam':
+        return <Exam key={key} data={data} />
+      case 'stats':
+        return <Stats data={data} st={st} />
+      case 'profile':
+        return <Profile />
+      case 'friends':
+        return <Friends />
+      case 'u':
+      case 'add':
+        return <PublicProfile key={args[0]} username={decodeURIComponent(args[0] || '')} />
+      case 'battle':
+        return <Battle key={args[0]} data={data} id={args[0]} />
+      case 'account':
+        return <Account />
+      case 'settings':
+        return <Settings st={st} />
+      default:
+        return <Home data={data} st={st} />
+    }
+  })()
+  return (
+    <>
+      <InviteBanner route={route} />
+      {page}
+    </>
+  )
 }

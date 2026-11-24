@@ -17,6 +17,8 @@
 - Supabase (PostgreSQL) - акаунти (email + пароль) і синхронізація прогресу.
 - Одна таблиця `progress`: `user_id`, `data` (jsonb), `updated_at`. Схема: `supabase/schema.sql`.
 - Доступ обмежено Row Level Security: користувач бачить лише свій рядок.
+- Друзі та батли (`supabase/social.sql`): `profiles`, `friendships`, `battles`, `battle_answers`,
+  Storage-бакет `avatars`. Живі оновлення - Supabase Realtime (з опитуванням як запасним варіантом).
 - Без входу прогрес зберігається локально (localStorage).
 
 ## Стек

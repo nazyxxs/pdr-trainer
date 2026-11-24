@@ -26,6 +26,10 @@ export const useSync = () =>
     () => status,
   )
 
+// інші модулі можуть виконати щось після вдалої синхронізації
+const afterSync = new Set()
+export const onSynced = (fn) => afterSync.add(fn)
+
 // ---- робота з сервером ----
 async function pull() {
   const { data, error } = await supabase.from('progress').select('data').eq('user_id', status.user.id).maybeSingle()
@@ -54,6 +58,7 @@ export async function syncNow() {
     await pull()
     await push()
     set({ state: 'synced', lastSync: Date.now() })
+    afterSync.forEach((fn) => fn())
   } catch (e) {
     set({ state: navigator.onLine ? 'error' : 'offline', error: e.message || String(e) })
   } finally {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useSync, signIn, signUp, signOut, syncNow, sendPasswordReset, updatePassword } from '../sync.js'
 import { Header } from '../components.jsx'
+import { go } from '../router.js'
 
 const STATE_TEXT = {
   idle: 'Очікування',
@@ -60,6 +61,13 @@ export default function Account() {
                 Вийти
               </button>
             </div>
+          </section>
+          <section className="card">
+            <h3>Профіль для друзів</h3>
+            <p className="muted small">Нікнейм, аватар і публічна статистика для рейтингу.</p>
+            <button className="btn" style={{ width: '100%' }} onClick={() => go('profile')}>
+              Мій профіль
+            </button>
           </section>
           {!sync.recovery && (
             <section className="card">

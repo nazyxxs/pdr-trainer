@@ -3,10 +3,12 @@ import { statsFor, streakInfo } from '../store.js'
 import { go } from '../router.js'
 import { Header, Ring } from '../components.jsx'
 import { useSync } from '../sync.js'
+import { useSocial } from '../social.js'
 
 export default function Home({ data, st }) {
   const cat = st.settings.category
   const sync = useSync()
+  const social = useSocial()
   const qs = questionsForCategory(data, cat)
   const s = statsFor(qs, st.q)
   const mistakes = qs.filter((q) => st.q[q.id] && st.q[q.id].last === 0).length
@@ -112,6 +114,13 @@ export default function Home({ data, st }) {
             <span className="tile-icon">🎲</span>
             <b>Тренування</b>
             <span>20 випадкових з підказками</span>
+          </button>
+          <button className="tile" onClick={() => go('friends')}>
+            <span className="tile-icon">⚔️</span>
+            <b>
+              Друзі і батли{social.incomingRequests > 0 && <span className="badge">{social.incomingRequests}</span>}
+            </b>
+            <span>Змагайся з друзями наживо</span>
           </button>
           <button className="tile" onClick={() => go('stats')}>
             <span className="tile-icon">📊</span>

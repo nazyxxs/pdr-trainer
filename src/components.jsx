@@ -127,3 +127,16 @@ export function Slide({ index, children }) {
     </div>
   )
 }
+
+// Аватар: фото або іконка на кольоровому фоні
+export function Avatar({ profile, size = 44 }) {
+  const style = { width: size, height: size, fontSize: size * 0.5 }
+  if (profile?.avatar_url) return <img className="avatar" style={style} src={profile.avatar_url} alt="" />
+  return (
+    <span className="avatar" style={{ ...style, background: profile?.avatar_color || '#64748b' }}>
+      {profile?.avatar_emoji || '🙂'}
+    </span>
+  )
+}
+
+export const displayName = (p) => (p ? p.display_name || p.username : '...')

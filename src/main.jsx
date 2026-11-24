@@ -2,9 +2,11 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 import { initSync } from './sync.js'
+import { initSocial } from './social.js'
 import './styles.css'
 
 initSync()
+initSocial()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
