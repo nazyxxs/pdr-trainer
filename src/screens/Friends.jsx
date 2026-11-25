@@ -126,7 +126,7 @@ export default function Friends() {
       <Header
         title="Друзі"
         right={
-          <button className="chip" onClick={() => go('profile')}>
+          <button className="chip" onClick={() => go('u/' + me.username)}>
             <Avatar profile={me} size={22} /> @{me.username}
           </button>
         }

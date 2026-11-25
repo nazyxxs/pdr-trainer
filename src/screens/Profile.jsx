@@ -67,8 +67,9 @@ export default function Profile() {
     setMsg(null)
     try {
       await saveProfile({ ...form, username: form.username.trim().toLowerCase(), display_name: form.display_name.trim() || null })
+      const saved = form.username.trim().toLowerCase()
       if (isNew) go('friends')
-      else setMsg({ ok: true, text: 'Збережено ✓' })
+      else go('u/' + saved)
     } catch (err) {
       setMsg({ ok: false, text: err.message })
     } finally {
@@ -91,7 +92,7 @@ export default function Profile() {
 
   return (
     <>
-      <Header title={isNew ? 'Створи профіль' : 'Мій профіль'} back={isNew ? '' : 'friends'} />
+      <Header title={isNew ? 'Створи профіль' : 'Мій профіль'} back={isNew ? '' : 'u/' + p.username} />
       <main className="page">
         {isNew && <p className="muted">Профіль потрібен, щоб друзі могли тебе знайти і викликати на батл.</p>}
         <form onSubmit={save}>

@@ -24,3 +24,30 @@ create policy "own progress: update" on public.progress
 -- (у нових проєктах Supabase він не видається автоматично -> "permission denied for table progress")
 grant usage on schema public to authenticated;
 grant select, insert, update on table public.progress to authenticated;
+
+-- Захист вогника: сервер не викидає вже записані дні, навіть якщо стара версія сайту
+-- надішле прогрес без них. Виняток - свідоме скидання кнопкою "Скинути все".
+create or replace function public.progress_keep_days()
+returns trigger language plpgsql as $$
+declare
+  merged jsonb := coalesce(new.data->'days', '{}'::jsonb);
+  d text; devs jsonb; dev text; n jsonb;
+begin
+  -- якщо прогрес свідомо скинули кнопкою "Скинути все" - нічого не повертаємо
+  if coalesce((new.data->>'resetAt')::bigint, 0) > coalesce((old.data->>'resetAt')::bigint, 0) then
+    return new;
+  end if;
+  for d, devs in select key, value from jsonb_each(coalesce(old.data->'days', '{}'::jsonb)) loop
+    for dev, n in select key, value from jsonb_each(devs) loop
+      if coalesce((merged #>> array[d, dev])::int, 0) < n::int then
+        merged := jsonb_set(merged, array[d], coalesce(merged->d, '{}'::jsonb) || jsonb_build_object(dev, n));
+      end if;
+    end loop;
+  end loop;
+  new.data := jsonb_set(new.data, '{days}', merged);
+  return new;
+end;
+$$;
+drop trigger if exists progress_keep_days on public.progress;
+create trigger progress_keep_days before update on public.progress
+  for each row execute function public.progress_keep_days();

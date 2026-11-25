@@ -1,7 +1,7 @@
 import { CATEGORIES, questionsForCategory } from '../data.js'
 import { statsFor, streakInfo } from '../store.js'
 import { go } from '../router.js'
-import { Header, Ring } from '../components.jsx'
+import { Header, Ring, Avatar } from '../components.jsx'
 import { useSync } from '../sync.js'
 import { useSocial } from '../social.js'
 
@@ -23,18 +23,24 @@ export default function Home({ data, st }) {
         back={null}
         right={
           <>
-            <button className="chip" onClick={() => go('settings')}>
-              Кат. {CATEGORIES[cat].label}
+            <button className="icon-btn" onClick={() => go('settings')} aria-label="Налаштування" title={`Налаштування · кат. ${CATEGORIES[cat].label}`}>
+              ⚙️
             </button>
-            {sync.configured && (
-              <button
-                className={'chip account-chip ' + (sync.user ? sync.state : 'guest')}
-                onClick={() => go('account')}
-                title={sync.user ? sync.user.email : 'Увійти'}
-              >
-                {sync.user ? '👤' : 'Увійти'}
-              </button>
-            )}
+            {sync.configured &&
+              (sync.user ? (
+                <button
+                  className={'avatar-btn ' + sync.state}
+                  onClick={() => go(social.profile ? 'u/' + social.profile.username : 'profile')}
+                  aria-label="Мій профіль"
+                  title="Мій профіль"
+                >
+                  {social.profile ? <Avatar profile={social.profile} size={36} /> : <span className="avatar" style={{ width: 36, height: 36, background: 'var(--line)' }}>👤</span>}
+                </button>
+              ) : (
+                <button className="chip account-chip guest" onClick={() => go('account')}>
+                  Увійти
+                </button>
+              ))}
           </>
         }
       />

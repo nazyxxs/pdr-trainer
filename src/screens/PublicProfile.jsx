@@ -9,6 +9,7 @@ import {
   removeFriendship,
   createBattle,
   battlesWith,
+  inviteLink,
 } from '../social.js'
 import { CATEGORIES } from '../data.js'
 import { go } from '../router.js'
@@ -92,12 +93,33 @@ export default function PublicProfile({ username }) {
   }
   const battle = act(async () => go('battle/' + (await createBattle(p.id))))
 
+  const share = async () => {
+    const url = inviteLink(p.username)
+    try {
+      if (navigator.share) await navigator.share({ title: 'Додай мене в ПДР Тренажері', url })
+      else {
+        await navigator.clipboard.writeText(url)
+        setErr('Посилання скопійовано')
+      }
+    } catch {
+      /* скасовано */
+    }
+  }
+
   let friendBtn
   if (isMe)
     friendBtn = (
-      <button className="btn" onClick={() => go('profile')}>
-        Редагувати профіль
-      </button>
+      <>
+        <button className="btn btn-primary" onClick={() => go('profile')}>
+          ✏️ Редагувати профіль
+        </button>
+        <button className="btn" onClick={share}>
+          🔗 Поділитися посиланням на профіль
+        </button>
+        <button className="btn" onClick={() => go('account')}>
+          👤 Акаунт: вхід, синхронізація, пароль
+        </button>
+      </>
     )
   else if (!fr)
     friendBtn = (
@@ -129,8 +151,9 @@ export default function PublicProfile({ username }) {
 
   return (
     <>
-      <Header title={'@' + p.username} back="friends" />
+      <Header title={isMe ? 'Мій профіль' : '@' + p.username} back={isMe ? '' : 'friends'} />
       <main className="page">
+        {isMe && <p className="muted small center-text">Так твій профіль бачать друзі</p>}
         <section className="card">
           <div className="profile-head">
             <Avatar profile={p} size={76} />
@@ -186,7 +209,7 @@ export default function PublicProfile({ username }) {
               Видалити з друзів
             </button>
           )}
-          {err && <p className="note bad">{err}</p>}
+          {err && <p className={err.startsWith('Посилання') ? 'note' : 'note bad'}>{err}</p>}
         </div>
 
         {history.length > 0 && (

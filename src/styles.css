@@ -1235,3 +1235,17 @@ code {
 .strip i.bad {
   background: var(--bad);
 }
+.avatar-btn {
+  border: 2px solid var(--line);
+  background: none;
+  border-radius: 50%;
+  padding: 1px;
+  line-height: 0;
+}
+.avatar-btn.error,
+.avatar-btn.offline {
+  border-color: var(--bad);
+}
+.topbar-right .icon-btn {
+  font-size: 1.05rem;
+}
