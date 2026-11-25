@@ -4,15 +4,22 @@
 // тож підсунути вигадане питання й закешувати його для всіх неможливо.
 //
 // Секрети (Edge Functions -> Secrets):
-//   GEMINI_API_KEY - ключ Google AI Studio (AIza...) або Vertex AI (AQ....)
-//   GEMINI_MODEL   - необов'язково, за замовчуванням gemini-2.5-flash
+//   GEMINI_API_KEY - ключ Google AI Studio (або Vertex AI)
+//   GEMINI_MODEL   - необов'язково, основна модель (інакше gemini-3.8-flash і запасні)
 //   SITE_URL       - необов'язково, за замовчуванням https://nazyxxs.github.io/pdr-trainer/
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { encodeBase64 } from 'jsr:@std/encoding@1/base64'
 
 const SITE = (Deno.env.get('SITE_URL') ?? 'https://nazyxxs.github.io/pdr-trainer/').replace(/\/?$/, '/')
 const KEY = Deno.env.get('GEMINI_API_KEY') ?? ''
-const MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash'
+// основна модель + запасні на випадок, якщо вона перевантажена або недоступна
+const MODELS = [
+  ...(Deno.env.get('GEMINI_MODEL') ? [Deno.env.get('GEMINI_MODEL')!] : []),
+  'gemini-3.8-flash',
+  'gemini-3.8-flash-lite',
+  'gemini-flash-latest',
+  'gemini-flash-lite-latest',
+]
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -33,11 +40,33 @@ async function getQuestion(id: string) {
   return questions.get(id)
 }
 
-// ключі AI Studio починаються з AIza, ключі Vertex AI (express mode) - з AQ.
-const endpoint = () =>
-  KEY.startsWith('AIza')
-    ? `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${KEY}`
-    : `https://aiplatform.googleapis.com/v1/publishers/google/models/${MODEL}:generateContent?key=${KEY}`
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+// Спершу Google AI Studio (ключі AIza... і нові AQ....), а якщо ключ від Vertex AI - запасний варіант
+const urlsFor = (model: string) => [
+  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${KEY}`,
+  `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent?key=${KEY}`,
+]
+
+async function callAI(body: unknown): Promise<{ res: Response; model: string }> {
+  let first: { res: Response; model: string } | null = null
+  for (const model of [...new Set(MODELS)]) {
+    for (const url of urlsFor(model)) {
+      // 503/429 - модель тимчасово перевантажена: ще одна спроба з паузою, потім наступна модель
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        if (res.ok) return { res, model }
+        if (!first) first = { res, model }
+        if ([429, 500, 503].includes(res.status) && attempt === 0) {
+          await sleep(1200)
+          continue
+        }
+        break
+      }
+    }
+  }
+  return first!
+}
 
 function prompt(q: Q) {
   const options = q.o.map((o, i) => `${i + 1}) ${o}`).join('\n')
@@ -73,13 +102,9 @@ Deno.serve(async (req) => {
       if (img.ok) parts.push({ inlineData: { mimeType: 'image/jpeg', data: encodeBase64(new Uint8Array(await img.arrayBuffer())) } })
     }
 
-    const ai = await fetch(endpoint(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
-      }),
+    const { res: ai, model } = await callAI({
+      contents: [{ role: 'user', parts }],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
     })
     if (!ai.ok) {
       const detail = (await ai.text()).slice(0, 400)
@@ -93,7 +118,7 @@ Deno.serve(async (req) => {
       .trim()
     if (!text) return json({ error: 'AI повернув порожню відповідь' }, 502)
 
-    await admin.from('explanations').upsert({ question_id: id, text, model: MODEL })
+    await admin.from('explanations').upsert({ question_id: id, text, model })
     return json({ text, cached: false })
   } catch (e) {
     console.error(e)

@@ -31,3 +31,8 @@ create policy "explanation_reports: add own" on public.explanation_reports
 create policy "explanation_reports: read own" on public.explanation_reports
   for select to authenticated using (user_id = auth.uid());
 grant select, insert on public.explanation_reports to authenticated;
+
+-- Серверна функція пише в кеш від імені service_role.
+-- У нових проєктах Supabase ці права не видаються автоматично.
+grant select, insert, update on table public.explanations to service_role;
+grant select on table public.explanation_reports to service_role;
