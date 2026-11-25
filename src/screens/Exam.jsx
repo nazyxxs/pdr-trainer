@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { makeExamTicket, CATEGORIES } from '../data.js'
 import { store } from '../store.js'
 import { go } from '../router.js'
-import { Header, QuestionView, Slide, useSwipe } from '../components.jsx'
+import { Header, QuestionView, Slide, useSwipe, Explanation } from '../components.jsx'
 
 const LIMIT = 20 * 60 // 20 хвилин
 const MAX_ERRORS = 2
@@ -145,6 +145,7 @@ export default function Exam({ data }) {
             <QuestionView q={q} selected={answers[review]} reveal onSelect={() => {}} />
           </Slide>
           {answers[review] === undefined && <div className="feedback bad">Без відповіді. Правильна: {q.a + 1}</div>}
+          <Explanation key={q.id} id={q.id} />
         </main>
         <nav className="bottom-bar">
           <button className="btn" disabled={review === 0} onClick={() => setReview(review - 1)}>
@@ -188,6 +189,7 @@ export default function Exam({ data }) {
             {answers[idx] === q.a ? 'Правильно!' : `Помилка. Правильна відповідь: ${q.a + 1}`}
           </div>
         )}
+        {answers[idx] !== undefined && <Explanation key={q.id} id={q.id} />}
         <p className="muted small">
           Помилок: {errors} з {MAX_ERRORS} допустимих
         </p>

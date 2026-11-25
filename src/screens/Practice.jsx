@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { questionsForCategory, shuffle } from '../data.js'
 import { store } from '../store.js'
 import { go } from '../router.js'
-import { Header, QuestionView, Slide, useSwipe } from '../components.jsx'
+import { Header, QuestionView, Slide, useSwipe, Explanation } from '../components.jsx'
 
 // Формує список питань для режиму тренування
 function buildList(data, st, mode, args) {
@@ -130,6 +130,7 @@ export default function Practice({ data, mode, args }) {
             {sel === q.a ? 'Правильно!' : `Неправильно. Правильна відповідь: ${q.a + 1}`}
           </div>
         )}
+        {revealed && <Explanation key={q.id} id={q.id} />}
       </main>
       <nav className="bottom-bar">
         <button className="btn" onClick={() => setIdx(idx - 1)} disabled={idx === 0}>

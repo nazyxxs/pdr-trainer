@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { go } from './router.js'
+import { explanationsEnabled, getExplanation, reportExplanation } from './explain.js'
 
 export function Header({ title, back = '', right = null }) {
   return (
@@ -140,3 +141,63 @@ export function Avatar({ profile, size = 44 }) {
 }
 
 export const displayName = (p) => (p ? p.display_name || p.username : '...')
+
+// Кнопка "Чому так?" і пояснення від AI
+export function Explanation({ id }) {
+  const [state, setState] = useState({ status: 'idle' })
+  const [reported, setReported] = useState(false)
+  if (!explanationsEnabled) return null
+
+  const load = async () => {
+    setState({ status: 'loading' })
+    try {
+      setState({ status: 'ok', text: await getExplanation(id) })
+    } catch (e) {
+      setState({ status: 'error', text: e.message })
+    }
+  }
+  const report = async () => {
+    try {
+      await reportExplanation(id)
+      setReported(true)
+    } catch (e) {
+      setState((s) => ({ ...s, note: e.message }))
+    }
+  }
+
+  if (state.status === 'idle')
+    return (
+      <button className="btn explain-btn" onClick={load}>
+        💡 Чому так?
+      </button>
+    )
+  return (
+    <div className="explain">
+      {state.status === 'loading' && <p className="muted">💡 Думаю над поясненням...</p>}
+      {state.status === 'error' && (
+        <p className="note bad">
+          {state.text}{' '}
+          <button className="link-btn" onClick={load}>
+            Спробувати ще
+          </button>
+        </p>
+      )}
+      {state.status === 'ok' && (
+        <>
+          <p className="explain-text">{state.text}</p>
+          <div className="explain-foot">
+            <span>🤖 Пояснення від AI, може містити неточності</span>
+            {reported ? (
+              <span>Дякую, скаргу надіслано</span>
+            ) : (
+              <button className="link-btn" onClick={report}>
+                ⚠️ Тут помилка
+              </button>
+            )}
+          </div>
+          {state.note && <p className="note bad">{state.note}</p>}
+        </>
+      )}
+    </div>
+  )
+}
