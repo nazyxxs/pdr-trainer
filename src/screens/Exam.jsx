@@ -29,7 +29,6 @@ export default function Exam({ data }) {
       finishedRef.current = true
       const correct = Object.entries(answers).filter(([i, a]) => ticket[i].a === a).length
       const passed = reason === 'done' && answered === ticket.length && ticket.length - correct <= MAX_ERRORS
-      Object.entries(answers).forEach(([i, a]) => store.answer(ticket[i].id, ticket[i].a === a))
       store.addExam({ t: Date.now(), correct, total: ticket.length, passed, seconds: Math.round((Date.now() - started.current) / 1000), cat })
       setFinished({ reason, correct, passed })
     },
@@ -59,6 +58,8 @@ export default function Exam({ data }) {
     if (answers[idx] !== undefined || finished) return
     // як у сервісному центрі: одразу видно, правильно чи ні
     setAnswers({ ...answers, [idx]: i })
+    // відповідь одразу йде в прогрес і вогник (навіть якщо іспит покинуть посередині)
+    store.answer(ticket[idx].id, ticket[idx].a === i)
   }
 
   const skip = () => {
@@ -167,6 +168,7 @@ export default function Exam({ data }) {
     <>
       <Header
         title={`Іспит · кат. ${CATEGORIES[cat].label}`}
+        confirmLeave={answered > 0 ? 'Вийти з іспиту? Результат цього білета не збережеться.' : null}
         right={<span className={'timer' + (left < 120 ? ' warn' : '')}>{fmt(left)}</span>}
       />
       <div className="grid-nav exam-nav">

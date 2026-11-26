@@ -178,3 +178,9 @@ create policy "avatars: update own" on storage.objects
 create policy "avatars: delete own" on storage.objects
   for delete to authenticated
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ============ ЧАС СЕРВЕРА ============
+-- Щоб відлік батлу був однаковий у обох гравців, навіть якщо годинник на телефоні неточний.
+create or replace function public.server_now()
+returns timestamptz language sql stable as $$ select now() $$;
+grant execute on function public.server_now() to authenticated;

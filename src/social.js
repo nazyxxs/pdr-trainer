@@ -44,7 +44,7 @@ export async function saveProfile(patch) {
   const { data, error } = await supabase.from('profiles').upsert(row).select().single()
   if (error) fail(error)
   set({ profile: data })
-  publishStats()
+  publishStats(true)
   return data
 }
 
@@ -68,11 +68,16 @@ export async function uploadAvatar(file) {
 }
 
 // публічна статистика для рейтингу друзів
+// Після кожної синхронізації - не частіше ніж раз на хвилину (щоб не робити зайвих запитів),
+// після батлу чи зміни профілю - одразу (force).
 let publishTimer = null
-export function publishStats() {
+let lastPublish = 0
+export function publishStats(force = false) {
+  if (!force && Date.now() - lastPublish < 60 * 1000) return
   clearTimeout(publishTimer)
   publishTimer = setTimeout(async () => {
     if (!me.userId || !me.profile) return
+    lastPublish = Date.now()
     const st = store.get()
     const data = await loadData()
     const s = statsFor(questionsForCategory(data, st.settings.category), st.q)
@@ -182,11 +187,35 @@ export async function setBattleStatus(id, status, from) {
   if (error) fail(error)
 }
 
+// відповідь у батлі: кілька спроб, якщо зв'язок на мить пропав
 export async function submitBattleAnswer(battleId, index, answer, correct) {
-  const { error } = await supabase
-    .from('battle_answers')
-    .insert({ battle_id: battleId, user_id: me.userId, q_index: index, answer, correct })
-  if (error && error.code !== '23505') fail(error)
+  let lastError = null
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const { error } = await supabase
+      .from('battle_answers')
+      .insert({ battle_id: battleId, user_id: me.userId, q_index: index, answer, correct })
+    if (!error || error.code === '23505') return // 23505 - вже записано
+    lastError = error
+    if (error.code === '42501') break // батл уже завершено - повтор не допоможе
+    await new Promise((r) => setTimeout(r, 800 * (attempt + 1)))
+  }
+  fail(lastError)
+}
+
+// Різниця між годинником пристрою і сервера: щоб відлік батлу був однаковим у обох гравців,
+// навіть якщо на телефоні неточний час. Потребує функції server_now() (supabase/social.sql).
+let clockOffset = null
+export async function serverClockOffset() {
+  if (clockOffset !== null) return clockOffset
+  try {
+    const t0 = Date.now()
+    const { data, error } = await supabase.rpc('server_now')
+    const t1 = Date.now()
+    clockOffset = error || !data ? 0 : new Date(data).getTime() - (t0 + t1) / 2
+  } catch {
+    clockOffset = 0
+  }
+  return clockOffset
 }
 
 // підсумок: більше правильних - перемога; порівну - швидший; повністю порівну - нічия
@@ -214,7 +243,7 @@ export async function finishBattle(battle, answers) {
     .update({ status: 'finished', winner: s.winner, host_score: s.host.correct, guest_score: s.guest.correct })
     .eq('id', battle.id)
     .eq('status', 'active')
-  publishStats()
+  publishStats(true)
 }
 
 export async function battlesWith(otherId) {

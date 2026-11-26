@@ -65,6 +65,21 @@ function load() {
 let state = load()
 const listeners = new Set()
 
+// Сайт відкритий у кількох вкладках одного браузера: підхоплюємо зміни з інших вкладок,
+// інакше вкладка зі старим станом перезаписала б відповіді, дані в іншій.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== KEY || !e.newValue) return
+    try {
+      const other = JSON.parse(e.newValue)
+      state = mergeStates(state, other)
+      listeners.forEach((l) => l())
+    } catch {
+      /* пошкоджені дані */
+    }
+  })
+}
+
 function save(next) {
   state = next
   try {
@@ -133,6 +148,10 @@ export const store = {
   },
   reset() {
     save({ ...empty(), settings: state.settings, settingsT: state.settingsT, resetAt: Date.now(), days: {} })
+  },
+  // інший користувач увійшов на цьому пристрої: прибираємо прогрес попереднього
+  clearForAnotherUser() {
+    save({ ...empty(), settings: state.settings, settingsT: state.settingsT })
   },
   // злиття з іншим станом (з сервера або з файлу)
   merge(other) {

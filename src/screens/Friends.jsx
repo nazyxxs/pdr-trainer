@@ -43,6 +43,7 @@ export default function Friends() {
     return () => clearTimeout(t)
   }, [q])
 
+  if (sync.configured && !sync.authReady) return <div className="page center loading">Завантаження...</div>
   if (!sync.configured || !sync.user) {
     return (
       <>

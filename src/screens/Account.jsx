@@ -19,6 +19,7 @@ export default function Account() {
   const [msg, setMsg] = useState(null)
   const [loading, setLoading] = useState(false)
 
+  if (sync.configured && !sync.authReady) return <div className="page center loading">Завантаження...</div>
   if (!sync.configured) {
     return (
       <>

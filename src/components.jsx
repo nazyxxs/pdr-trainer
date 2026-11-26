@@ -2,11 +2,11 @@ import { useRef, useState } from 'react'
 import { go } from './router.js'
 import { explanationsEnabled, getExplanation, reportExplanation } from './explain.js'
 
-export function Header({ title, back = '', right = null }) {
+export function Header({ title, back = '', right = null, confirmLeave = null }) {
   return (
     <header className="topbar">
       {back !== null ? (
-        <button className="icon-btn" onClick={() => go(back)} aria-label="Назад">
+        <button className="icon-btn" onClick={() => (!confirmLeave || window.confirm(confirmLeave)) && go(back)} aria-label="Назад">
           ←
         </button>
       ) : (

@@ -37,6 +37,7 @@ export default function PublicProfile({ username }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username, sync.user, social.userId])
 
+  if (sync.configured && !sync.authReady) return <div className="page center loading">Завантаження...</div>
   if (!sync.user) {
     return (
       <>

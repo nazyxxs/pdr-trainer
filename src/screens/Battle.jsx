@@ -12,8 +12,10 @@ import {
   dismissInvite,
   BATTLE_LIMIT,
   BATTLE_COUNTDOWN,
+  serverClockOffset,
 } from '../social.js'
 import { store } from '../store.js'
+import { useSync } from '../sync.js'
 import { go } from '../router.js'
 import { Header, QuestionView, Slide, useSwipe, Avatar, displayName } from '../components.jsx'
 
@@ -21,6 +23,7 @@ const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math
 
 export default function Battle({ data, id }) {
   const social = useSocial()
+  const sync = useSync()
   const [nonce, setNonce] = useState(0)
   const battle = useLive(() => getBattle(id), [id, social.userId, nonce], { table: 'battles', filter: `id=eq.${id}`, every: 4000 })
   const serverAnswers = useLive(() => getBattleAnswers(id), [id, social.userId, nonce], {
@@ -35,8 +38,11 @@ export default function Battle({ data, id }) {
   const finishing = useRef(false)
   const refresh = () => setNonce((n) => n + 1)
 
+  // "now" за годинником сервера (поправка на неточний час на пристрої)
+  const offset = useRef(0)
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 250)
+    serverClockOffset().then((o) => (offset.current = o))
+    const t = setInterval(() => setNow(Date.now() + offset.current), 250)
     return () => clearInterval(t)
   }, [])
 
@@ -72,6 +78,18 @@ export default function Battle({ data, id }) {
     () => setIdx((i) => Math.max(0, i - 1)),
   )
 
+  if (sync.authReady && !sync.user)
+    return (
+      <>
+        <Header title="Батл" />
+        <main className="page center">
+          <p>Щоб брати участь у батлі, увійди в акаунт.</p>
+          <button className="btn btn-primary" onClick={() => go('account')}>
+            Увійти
+          </button>
+        </main>
+      </>
+    )
   if (battle === undefined || !social.userId) return <div className="page center loading">Завантаження батлу...</div>
   if (battle === null)
     return (

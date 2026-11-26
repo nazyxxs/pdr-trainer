@@ -87,7 +87,7 @@ export function shuffle(arr) {
 
 // "1. РЕГУЛЮВАННЯ ..." -> гарна назва з великої літери
 export function prettyTitle(title) {
-  const t = title.toLowerCase().replace(/\s+/g, ' ').trim()
+  const t = title.toLowerCase().replace('щодокатегорій', 'щодо категорій ').replace(/\s+/g, ' ').trim()
   // назви категорій (В1, В, C1E...) повертаємо великими літерами
   const fixed = t.replace(/(категорі[йїя]\s*)([^(]+)/, (m, a, cats) => a + cats.toUpperCase())
   return fixed.charAt(0).toUpperCase() + fixed.slice(1)

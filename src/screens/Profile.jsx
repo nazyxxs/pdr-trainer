@@ -28,6 +28,7 @@ export default function Profile() {
     }
   }, [social.loaded, p, form])
 
+  if (sync.configured && !sync.authReady) return <div className="page center loading">Завантаження...</div>
   if (!sync.configured || !sync.user) {
     return (
       <>

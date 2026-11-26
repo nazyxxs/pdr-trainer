@@ -11,7 +11,7 @@ const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const supabase = URL && KEY ? createClient(URL, KEY) : null
 
 // ---- стан синхронізації для інтерфейсу ----
-let status = { configured: !!supabase, user: null, state: 'idle', lastSync: null, error: null, recovery: false }
+let status = { configured: !!supabase, authReady: !supabase, user: null, state: 'idle', lastSync: null, error: null, recovery: false }
 const listeners = new Set()
 const set = (patch) => {
   status = { ...status, ...patch }
@@ -31,6 +31,23 @@ const afterSync = new Set()
 export const onSynced = (fn) => afterSync.add(fn)
 
 // ---- робота з сервером ----
+// чий прогрес зараз лежить у браузері (щоб не змішати прогрес двох людей на одному пристрої)
+const OWNER_KEY = 'pdr-progress-owner'
+const getOwner = () => {
+  try {
+    return localStorage.getItem(OWNER_KEY)
+  } catch {
+    return null
+  }
+}
+const setOwner = (id) => {
+  try {
+    localStorage.setItem(OWNER_KEY, id)
+  } catch {
+    /* приватний режим */
+  }
+}
+
 async function pull() {
   const { data, error } = await supabase.from('progress').select('data').eq('user_id', status.user.id).maybeSingle()
   if (error) throw error
@@ -55,8 +72,13 @@ export async function syncNow() {
   busy = true
   set({ state: 'syncing', error: null })
   try {
+    // Прогрес у браузері належить іншому акаунту - не зливаємо його з цим.
+    // Прогрес без власника (до першого входу) навпаки додається до акаунта.
+    const owner = getOwner()
+    if (owner && owner !== status.user.id) store.clearForAnotherUser()
     await pull()
     await push()
+    setOwner(status.user.id)
     set({ state: 'synced', lastSync: Date.now() })
     afterSync.forEach((fn) => fn())
   } catch (e) {
@@ -81,7 +103,7 @@ function schedule() {
 export function initSync() {
   if (!supabase) return
   supabase.auth.getSession().then(({ data }) => {
-    set({ user: data.session?.user ?? null })
+    set({ user: data.session?.user ?? null, authReady: true })
     if (data.session) syncNow()
   })
   supabase.auth.onAuthStateChange((event, session) => {
